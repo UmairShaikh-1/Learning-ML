@@ -1,0 +1,83 @@
+import numpy
+import torch
+
+#Matrices
+'''X = numpy.array([[25,2],[5,26],[3,7],[6,4]])
+X[:,0]
+X[1,:]
+X[0:2,0:2] #in pytorch you would slice in the same way
+print(X[0:4,[1]])'''
+
+#norm
+'''X = numpy.array([[1,2],[3,4]])
+print(numpy.linalg.norm(X))
+X_pt = torch.from_numpy(X)
+X_pt = X_pt.float()
+print(torch.norm(X_pt))'''
+
+#eigenvectors and eigenvalues
+'''A = numpy.array([[-1,4],[2,-2]])
+lambdas, V = numpy.linalg.eig(A)
+print(V,'\nThis is the value of V\n')
+print(lambdas,'\nThis is the value of lambda\n')
+v1 = V[:,0]
+Av = numpy.dot(A,v1)
+lambda1 = lambdas[0]
+lv = numpy.dot(lambda1,v1)
+print(Av,'\nThis is the value of Av\n')
+print (lv,'\nThis is the value of lambdav\n')
+
+At = torch.tensor([[-1,4],[2,-2]],dtype=torch.cfloat)
+eigenval,eigenvec = torch.linalg.eig(At)
+v2 = eigenvec[:,1]
+lambda2 = eigenval[1]
+Av2 = torch.matmul(At,v2)
+print(Av2,'\nThis is value of Av2\n')
+print(lambda2 * v2,'\nThis is the value of lambdav2\n')
+
+
+X = torch.tensor([[25,2,9],[5,26,-5],[3,7,-1]],dtype=torch.cfloat)
+eigenval,eigenvec = torch.linalg.eig(X)
+v1 = eigenvec[:,0]
+Xv1 = torch.matmul(X,v1)
+lambda1 = eigenval[0]
+lambdav1 = v1 * lambda1
+print('\nThe value of Xv is',Xv1)
+print('\nThe value of lambda * v is',lambdav1)'''
+
+#determinant
+'''X = torch.tensor ([[-3,10],[8,-73]], dtype=float)
+print('numpy.linalg.det(X):',torch.linalg.det(X))'''
+
+#eigendecomposition
+'''A = torch.tensor([[25,2,-5],[3,-2,1],[5,7,4]], dtype=torch.cfloat)
+lambdas, V = torch.linalg.eig(A)
+Vinv = torch.inverse(V)
+Lamb = torch.diag(lambdas)
+print('\n',torch.matmul(V,torch.matmul(Lamb,Vinv))) #matmul used in pytorch and dot used in numpy
+
+S = torch.tensor([[25,2,-5],[2,-2,1],[-5,1,4]],dtype = torch.cfloat)
+Lambdas, Q = torch.linalg.eig(S)
+dag = torch.diag(Lambdas)
+print('\n',torch.matmul(Q,torch.matmul(dag,Q.T))) 
+print('\n',torch.matmul(Q,Q.T),'proves that the matrix Q contains orthogonal vectors')'''
+
+#singular value decomposition
+'''P = torch.tensor([[25,2,-5],[3,-2,1],[5,7,4]], dtype = torch.float) #float instead of cfloat
+U , d, VT = torch.linalg.svd(P)
+D = torch.diag(d) #need to make the size of D same as P by concatenating 0 matrix if the size is not the same
+print (torch.matmul(U,torch.matmul(D,VT)))'''
+
+#psuedoinverse
+'''A = torch.tensor([[-1,2],[3,-2],[5,7]],dtype = torch.float)
+U ,d ,VT = torch.linalg.svd(A)
+D = torch.diag(d)
+Dp = torch.concatenate((torch.inverse(D).T,torch.tensor([[0,0]]).T) , axis=1)
+A_pi = torch.matmul(VT.T,torch.matmul(Dp,U.T))
+print('\n',A_pi)
+
+print('\n',torch.pinverse(A)) #built in function to do it'''
+
+#Trace operator
+A_p = torch.tensor([[-1,2],[3,-2],[5,7]],dtype =torch.float)
+print(torch.trace(torch.matmul(A_p,A_p.T))**(1/2) == torch.norm(A_p))
