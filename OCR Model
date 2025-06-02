@@ -1,0 +1,119 @@
+# Import necessary libraries and set up logging
+import os
+import torch
+from transformers import TrOCRProcessor, VisionEncoderDecoderModel, Trainer, TrainingArguments
+from evaluate import load
+from torch.utils.data import DataLoader
+from iam_dataset import IAMDataset
+from datetime import datetime
+import logging
+import gc
+
+# Set up logging for monitoring training progress
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Define constants for data path, output directory, and training parameters
+DATA_PATH = r"C:\Users\vaish\Desktop\Projects\Done\HandWriting_Detect\data\IAM_Dataset"
+OUTPUT_DIR = "./results"
+BATCH_SIZE = 4
+NUM_EPOCHS = 5
+LEARNING_RATE = 5e-5
+MAX_LENGTH = 128
+# Splitting into Train-Test split before preprocessing to avoide data leakage
+train_dataset = IAMDataset(data_path=DATA_PATH, split='train', max_length=MAX_LENGTH)
+val_dataset = IAMDataset(data_path=DATA_PATH, split='val', max_length=MAX_LENGTH)
+
+# Display some sample images and labels
+import matplotlib.pyplot as plt
+
+for i in range(3):
+    img, label = train_dataset[i]['pixel_values'], train_dataset[i]['labels']
+    plt.imshow(img[0], cmap='gray')
+    plt.title(f"Label: {label}")
+    plt.show()
+
+# Check the number of images in the dataset
+logger.info(f"Training samples: {len(train_dataset)}")
+logger.info(f"Validation samples: {len(val_dataset)}")
+
+# Check for any missing labels
+missing_labels = sum(1 for item in train_dataset if item['labels'] is None)
+logger.info(f"Images without labels: {missing_labels}")
+
+# Additional EDA: Image shape
+image_shape = train_dataset[0]['pixel_values'].shape
+logger.info(f"Shape of each image: {image_shape}")
+# Check for existing checkpoints
+checkpoint_dirs = [d for d in os.listdir(OUTPUT_DIR) if d.startswith('checkpoint-')]
+if checkpoint_dirs:
+    latest_checkpoint = max(checkpoint_dirs, key=lambda x: int(x.split('-')[1]))
+    checkpoint_path = os.path.join(OUTPUT_DIR, latest_checkpoint)
+    logger.info(f"Resuming from checkpoint: {checkpoint_path}")
+    model = VisionEncoderDecoderModel.from_pretrained(checkpoint_path).to(device)
+else:
+    logger.info("No checkpoint found, starting fresh training")
+    model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwritten").to(device)
+
+# Set model configurations
+model.config.decoder_start_token_id = processor.tokenizer.bos_token_id
+model.config.pad_token_id = processor.tokenizer.pad_token_id
+model.config.max_length = MAX_LENGTH
+model.config.early_stopping = True
+model.config.num_beams = 4
+# Define training arguments
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    per_device_train_batch_size=BATCH_SIZE,
+    per_device_eval_batch_size=BATCH_SIZE,
+    evaluation_strategy="steps",
+    eval_steps=max(len(train_dataset) * NUM_EPOCHS // BATCH_SIZE // 10, 1),
+    save_strategy="steps",
+    logging_steps=max(eval_steps // 2, 1),
+    learning_rate=LEARNING_RATE,
+    num_train_epochs=NUM_EPOCHS,
+    weight_decay=0.01,
+    warmup_steps=eval_steps // 2,
+    fp16=True,
+    gradient_accumulation_steps=4,
+    load_best_model_at_end=True,
+    metric_for_best_model="cer",
+    greater_is_better=False
+)
+
+# Initialize Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset,
+    compute_metrics=lambda p: compute_metrics(p, processor),
+)
+# Load CER and WER metrics
+cer_metric = load("cer")
+wer_metric = load("wer")
+
+# Define metric computation function
+def compute_metrics(pred):
+    logits, labels = pred
+    pred_ids = logits.argmax(-1)
+    labels_ids = labels
+    labels_ids[labels_ids == -100] = processor.tokenizer.pad_token_id
+    pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
+    label_str = processor.batch_decode(labels_ids, skip_special_tokens=True)
+    cer = cer_metric.compute(predictions=pred_str, references=label_str)
+    wer = wer_metric.compute(predictions=pred_str, references=label_str)
+    return {"cer": cer, "wer": wer}
+# Start training
+logger.info("Starting/Resuming training...")
+trainer.train()
+
+# Save the trained model
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+final_output_dir = os.path.join(OUTPUT_DIR, f"final_model_{timestamp}")
+trainer.save_model(final_output_dir)
+logger.info(f"Model saved to {final_output_dir}")
+# Evaluate the model on validation data
+final_metrics = trainer.evaluate()
+logger.info(f"Final CER: {final_metrics['eval_cer']:.4f}")
+logger.info(f"Final WER: {final_metrics['eval_wer']:.4f}")
