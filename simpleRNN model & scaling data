@@ -1,0 +1,48 @@
+#question 6
+'''import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+#read data
+df = pd.read_csv('data_boston.csv',header='infer',encoding='latin1')
+df = df[['PRICE']]
+
+#scale input & X,y
+scaler = MinMaxScaler()
+ts_scaled = scaler.fit_transform(df)
+
+#scale
+ts_scaled_2 = ts_scaled.reshape(1,-1,1)
+
+#training parameters
+batch_size = 1
+n_epochs = 1000
+learn_rate=0.0001
+
+#model
+model = tf.keras.Sequential()
+model.add(tf.keras.Input(shape=(None,1)))
+
+model = tf.keras.Sequential([tf.keras.Input(shape=(None,1)),
+                             tf.keras.layers.SimpleRNN(50,activation='relu',return_sequence=True),
+                             tf.keras.layers.SimpleRNN(50,activation='relu',return_sequence=True),
+                             tf.keras.layers.Dense(1)])
+
+optimizer = tf.keras.optimizers.Adam(learning_rate=learn_rate)
+model.compile(loss='mean_squared_error',optimizer=optimizer)
+
+history = model.fit(ts_scaled_2,ts_scaled_2,epochs = n_epochs,batch_size=batch_size,verbose=1)'''
+
+#question 8.2
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+dict = {'BP':[121,140,120,131,101], 'height':[1.72,1.62,1.70,1.82,1.78], 'weight':[69.0,63.2,59.0,82.0,73.5]}
+dataframe = pd.DataFrame(dict)
+scaler = StandardScaler()
+scaled = scaler.fit_transform(dataframe)
+print(scaled)
