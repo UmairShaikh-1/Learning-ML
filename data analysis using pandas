@@ -1,0 +1,43 @@
+import pandas as pd
+df = pd.read_csv('Week 2 quiz databases\data_studentlist.csv')
+#1.1
+male_val = df[df['Gender']== 'M']
+pd.to_numeric(df['Height'])
+print(male_val['Height'].mean(),'\n')
+
+#1.2
+female_val = df[df['Gender'] =='F']
+print(female_val['Height'].mean(),'\n')
+
+#1.3
+print(male_val['Weight'].mean(),'\n')
+
+#1.4
+print(female_val['Weight'].mean(),'\n')
+
+#1.5
+print(male_val['Height'].max(),'\n')
+
+#1.6
+print(female_val['Height'].min(),'\n')
+
+#1.7
+male_h175 = df[(df['Gender']=='M')&(df['Height']>175)]
+print(male_h175['Weight'].min(),'\n')
+
+#1.8
+female_h160 = df[(df['Gender']=='F')&(df['Height']<160)]
+print(female_h160['Weight'].max(),'\n')
+
+#1.9
+no_absent = df[df['Absence'] == 'N']
+print(no_absent['Grade'].mean(),'\n')
+
+#1.10
+
+absent = df[df['Absence'] == 'Y']
+print(absent['Grade'].mean(),'\n')
+
+#1.11
+AB_blood = df[(df['Bloodtype'] == 'A') | (df['Bloodtype'] == 'AB')]
+print(AB_blood['Height'].mean(),'\n')
